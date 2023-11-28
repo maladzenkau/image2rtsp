@@ -1,12 +1,12 @@
 ## Acknowledgement
 This project is a migration from ROS1 to ROS2. The original code was developed by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/tree/master). I would like to express my gratitude for his contribution.
 
-## ros2_rtsp
+## image2rtsp
 The migration is still in process, thus the full functionality of the original package is not presented yet. The current version supports only the conversion of one chosen ROS2 topic into an RTSP stream with an expected delay of about 30-50ms. 
 It is being developed on Ubuntu 20.04 with ROS2 Foxy.
 
 ## Dependencies
-- ROS2
+- ROS2 foxy
 
 - gstreamer libs:
 ```bash
