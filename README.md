@@ -2,9 +2,8 @@
 This project is a migration from ROS1 to ROS2. The original code was developed by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/tree/master). I would like to express my gratitude for his contribution.
 
 ## image2rtsp
-The migration is still in process, thus the full functionality of the original package is not presented yet. The current version supports only the conversion of one chosen ROS2 topic into an RTSP stream with an expected delay of about 30-50ms. 
-It is being developed on Ubuntu 20.04 with ROS2 Foxy.
-
+This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
+The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 ## Dependencies
 - ROS2 foxy
 
@@ -16,8 +15,8 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
   - Navigate to the root directory, create a new directory named `image2rtsp/src`, and then change the current working directory to `image2rtsp/src`:
       ```bashrc
       cd
-      mkdir -p image2rtsp/src
-      cd image2rtsp/src/
+      mkdir -p ros2_ws/src
+      cd ros2_ws/src/
       ```
   - Clone the package:
       ```bashrc
@@ -25,7 +24,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Adjust  `parameters.yaml` according to your needs:
       ```bashrc
-      gedit ~/image2rtsp/src/image2rtsp/config/parameters.yaml
+      gedit ~/ros2_ws/src/image2rtsp/config/parameters.yaml
       ```
 # Example ROS2 Image topic stream
     topic: "/color/image_raw"  # The ROS2 topic to subscribe to
@@ -42,7 +41,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
                                # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)
   - Save your configuration and navigate to `image2rtsp ` colcon root, source and build the package:
       ```bashrc
-      cd ~/image2rtsp/
+      cd ~/ros2_ws/
       colcon build --packages-select image2rtsp
       ```
 ## Run
@@ -56,15 +55,16 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
 ## Check the stream
 To check the stream, follow the instructions for gstreamer, mpv or VLC provided by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/blob/master/README.md) or use python script (ensure before that the open-cv library is installed, if not `pip install opencv-python`):
 ```bash
-gedit ~/image2rtsp/src/image2rtsp/python/rtsp.py
+gedit ~/ros2_ws/src/image2rtsp/python/rtsp.py
 ```
 Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save and run:
 ```bash
-python3 ~/image2rtsp/src/image2rtsp/python/rtsp.py
+python3 ~/ros2_ws/src/image2rtsp/python/rtsp.py
 ```
 ## Limitations
 - As was previously mentioned, this package allows the conversion of only one topic into an RTSP Stream.
 - Some machines may have a significantly bigger delay of about 150-200ms. The reason is currently unknown.
+- Its possible to use this package with Humble if ROS2 parameters are hardcoded as variables. 
 ## To Do
 - Add a branch with the package rewritten as a ROS2 component
 - Port the package to Nvidia Jetson Orin. Will the use of the Nvidia encoder make the delay smaller?
