@@ -57,7 +57,7 @@ To check the stream, follow the instructions for gstreamer, mpv or VLC provided 
 ```bash
 gedit ~/ros2_ws/src/image2rtsp/python/rtsp.py
 ```
-Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save, source and run:
+Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save and run:
 ```bash
 cd ~/ros2_ws/
 source install/setup.bash
