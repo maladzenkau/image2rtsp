@@ -3,6 +3,7 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 
 ## image2rtsp
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
+
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 ## Dependencies
 - ROS2 foxy
@@ -12,7 +13,7 @@ The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev libgstrtspserver-1.0-dev gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad
 ```
 ## Install
-  - Navigate to the root directory, create a new directory named `image2rtsp/src`, and then change the current working directory to `image2rtsp/src`:
+  - Navigate to the root directory, create a new directory named `ros2_ws/src`, and then change the current working directory to `ros2_ws/src`:
       ```bashrc
       cd
       mkdir -p ros2_ws/src
