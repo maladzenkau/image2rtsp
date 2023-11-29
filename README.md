@@ -13,9 +13,15 @@ It is being developed on Ubuntu 20.04 with ROS2 Foxy.
 sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev libgstrtspserver-1.0-dev gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad
 ```
 ## Install
+  - Navigate to the root directory, create a new directory named `image2rtsp/src`, and then change the current working directory to `image2rtsp/src`:
+      ```bashrc
+      cd
+      mkdir -p image2rtsp/src
+      cd image2rtsp/src/
+      ```
   - Clone the package:
       ```bashrc
-      git clone https://github.com/45kmh/ros2_rtsp.git
+      git clone https://github.com/45kmh/image2rtsp.git
       ```
   - Adjust  `parameters.yaml` according to your needs:
       ```bashrc
