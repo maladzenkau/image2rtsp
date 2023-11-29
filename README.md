@@ -57,9 +57,11 @@ To check the stream, follow the instructions for gstreamer, mpv or VLC provided 
 ```bash
 gedit ~/ros2_ws/src/image2rtsp/python/rtsp.py
 ```
-Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save and run:
+Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save, open another terminal, source and run:
 ```bash
-python3 ~/ros2_ws/src/image2rtsp/python/rtsp.py
+cd ~/ros2_ws/
+source install/setup.bash
+ros2 launch image2rtsp rtsp.launch.py 
 ```
 ## Limitations
 - As was previously mentioned, this package allows the conversion of only one topic into an RTSP Stream.
