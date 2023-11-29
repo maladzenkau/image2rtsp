@@ -6,7 +6,7 @@ This project enables the conversion of a selected ROS2 topic of type `sensor_msg
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 ## Dependencies
-- ROS2 foxy
+- ROS2 Foxy
 
 - gstreamer libs:
 ```bash
