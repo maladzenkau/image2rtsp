@@ -53,11 +53,11 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       Don't use **`ros2 run`**!
     
 ## Check the stream
-To check the stream, follow the instructions for gstreamer, mpv or VLC provided by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/blob/master/README.md) or use python script (ensure before that the open-cv library is installed, if not `pip install opencv-python`):
+To check the stream, follow the instructions for gstreamer, mpv or VLC provided by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/blob/master/README.md) or use python script (ensure before that the open-cv library is installed, if not `pip install opencv-python`). Open new terminal, ensure that the topic to be converted exists and the RTSP stream is running. Then:
 ```bash
 gedit ~/ros2_ws/src/image2rtsp/python/rtsp.py
 ```
-Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save, open another terminal, source and run:
+Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save, source and run:
 ```bash
 cd ~/ros2_ws/
 source install/setup.bash
