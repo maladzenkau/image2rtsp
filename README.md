@@ -65,4 +65,3 @@ python3 ~/image2rtsp/src/image2rtsp/python/rtsp.py
 - Port packages to ROS2 Humble.
 - Complete the functionality according to the functionality of the original ROS package.
 
-
