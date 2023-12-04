@@ -24,13 +24,13 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Clone the package and navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://gitlab.rhrk.uni-kl.de/dmalad/image2rtsp.git
+      git clone https://github.com/45kmh/image2rtsp.git
       cd image2rtsp/
       ```
   - To use the package as a **simple subscriber** with ROS2 Foxy stay on the main (Dont forget to switch the README).
   - To use the package as a **component** with ROS2 checkout **ros2_component** branch.
       ```bashrc
-      git checkout ros2_component
+      git checkout ros2_component_foxy
       ```
   - Check the framerate of the topic to be subscribed:
       ```bashrc
