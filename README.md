@@ -6,7 +6,7 @@ This project enables the conversion of a selected ROS2 topic of type `sensor_msg
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 
-You are reading now the README for a package written as a ROS2 Foxy **component**. If you want to use this package as a default ROS2 Foxy package, checkout `master` branch. 
+You are reading now the README for a package written as a ROS2 Foxy **component**. If you want to use this package as a default ROS2 Foxy package, checkout `master_foxy` branch. 
 
 ## Dependencies
 - ROS2 foxy
