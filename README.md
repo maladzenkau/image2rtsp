@@ -28,7 +28,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - To use the package as a **component** with ROS2 checkout **ros2_component_foxy** branch (Dont forget to switch the README).
       ```bashrc
-      git checkout ros2_component
+      git checkout ros2_component_foxy
       ```
   - To use the package as a **simple subscriber** with ROS2 Foxy stay on the `master` branch and follow the instructions.
   - Check the framerate of the topic to be subscribed:
