@@ -18,36 +18,65 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(rcutils REQUIRED)
 pkg_check_modules(GST REQUIRED 
   gstreamer-1.0
   gstreamer-app-1.0
   gstreamer-rtsp-server-1.0
 )
-file(GLOB SOURCES src/video.cpp)
 
-add_executable(image2rtsp src/image2rtsp.cpp ${SOURCES})
-ament_target_dependencies(image2rtsp rclcpp sensor_msgs)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 include_directories(
+  include
   ${GST_INCLUDE_DIRS}
   )
-target_link_libraries(image2rtsp 
-  ${GST_LIBRARIES} 
-  )
+
+# create ament index resource which references the libraries in the binary dir
+set(node_plugins "")
+
+add_library(image2rtsp SHARED
+  src/image2rtsp.cpp src/video.cpp)
+
+ament_target_dependencies(image2rtsp rclcpp sensor_msgs)
+target_compile_definitions(image2rtsp
+  PRIVATE "IMAGE2RTSP_BUILDING_DLL")
+
+target_link_libraries(image2rtsp
+  ${sensor_msgs_TARGETS}
+  ${GST_LIBRARIES})
+
+ament_target_dependencies(image2rtsp
+  "rclcpp"
+  "rclcpp_components"
+  "sensor_msgs")
+rclcpp_components_register_nodes(image2rtsp "Image2rtsp")
+set(node_plugins "${node_plugins}Image2rtsp;$<TARGET_FILE:image2rtsp>\n")
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # uncomment the line when a copyright and license is not present in all source files
+  #set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # uncomment the line when this package is not in a git repo
+  #set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
 
 install(TARGETS
   image2rtsp
-  DESTINATION lib/${PROJECT_NAME}
-  )
-
-install(
-  DIRECTORY 
-  config 
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+  
+install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}
-  )
-
+)
 # Install Python modules
 ament_python_install_package(python)
 
@@ -56,6 +85,5 @@ install(PROGRAMS
   python/rtsp.py
   DESTINATION lib/${PROJECT_NAME}
 )
-
 
 ament_package()

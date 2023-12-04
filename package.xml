@@ -3,19 +3,18 @@
 <package format="3">
   <name>image2rtsp</name>
   <version>0.0.0</version>
-  <description>topic to RTSP stream package</description>
+  <description>takes ROS2 topics as a source and provides rtsp video stream as a sink</description>
   <maintainer email="dmalad@rptu.de">dmitry</maintainer>
   <license>BSD</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
-  <exec_depend>ros2launch</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

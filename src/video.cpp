@@ -4,9 +4,13 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "../include/image2rtsp.hpp"
-#include "../include/image_encodings.h"
+
+extern "C" {
+  #include "../include/image_encodings.h"
+}
 
 using namespace std;
+
 
 static void *mainloop(void *arg){
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
@@ -131,7 +135,7 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
                                "format", G_TYPE_STRING, format->second.c_str(),
                                "width", G_TYPE_INT, msg->width,
                                "height", G_TYPE_INT, msg->height,
-                               "framerate", GST_TYPE_FRACTION, 10, 1,
+                               "framerate", GST_TYPE_FRACTION, stoi(framerate), 1,
                                nullptr);
 }
 
