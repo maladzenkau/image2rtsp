@@ -3,10 +3,11 @@
       topic: "/color/image_raw"
       mountpoint: "/back"
       bitrate: "500"
-      caps: "video/x-raw,framerate=10/1,width=640,height=480"
+      framerate: "30"
+      caps_1: "video/x-raw, framerate ="
+      caps_2: "/1,width=640,height=480"
       port: "8554"
-      local_only: True     # True = rtsp://127.0.0.1:port (The stream is accessible only from the local machine)
+      local_only: True     # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)
                            # False = rtsp://0.0.0.0:portAndMountpoint (The stream is accessible from the outside) 
                            # For example, to access the stream running on the machine with IP = 192.168.20.20,
                            # use rtsp://192.186.20.20:portAndMountpoint
-                           # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)

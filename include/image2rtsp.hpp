@@ -18,7 +18,9 @@ private:
     string topic;
     string mountpoint;
     string bitrate;
-    string caps;
+    string framerate;
+    string caps_1;
+    string caps_2;
     string port;
     string pipeline;
     string pipeline_head;

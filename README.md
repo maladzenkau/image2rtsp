@@ -5,8 +5,10 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
+
+You are reading now the README for a **default** ROS2 Foxy package. If you want to use this package written as a ROS2 Foxy component, checkout `ros2_component` branch. 
 ## Dependencies
-- ROS2 Foxy
+- ROS2 foxy
 
 - gstreamer libs:
 ```bash
@@ -19,10 +21,20 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       mkdir -p ros2_ws/src
       cd ros2_ws/src/
       ```
-  - Clone the package:
+  - Clone the package and then navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://github.com/45kmh/image2rtsp.git
+      git clone https://gitlab.rhrk.uni-kl.de/dmalad/image2rtsp.git
+      cd image2rtsp/
       ```
+  - To use the package as a **component** with ROS2 checkout **ros2_component** branch (Dont forget to switch the README).
+      ```bashrc
+      git checkout ros2_component
+      ```
+  - To use the package as a **simple subscriber** with ROS2 Foxy stay on the `master` branch and follow the instructions.
+  - Check the framerate of the topic to be subscribed:
+      ```bashrc
+      ros2 topic hz /someTopic
+      ```  
   - Adjust  `parameters.yaml` according to your needs:
       ```bashrc
       gedit ~/ros2_ws/src/image2rtsp/config/parameters.yaml
@@ -31,16 +43,18 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
     topic: "/color/image_raw"  # The ROS2 topic to subscribe to
     mountpoint: "/back"        # Choose the mountpoint for the rtsp stream. 
                                # This will be able to be accessed from rtsp://<server_ip>/portAndMountpoint
-    caps: "video/x-raw,framerate=10/1,width=640,height=480"
-                               # Set the caps to be applied after getting the ROS2 Image and before the x265 encoder.
     bitrate: "500"
+    framerate: "30"            # Make sure that your framerate corresponds to the frequency of a topic you are subscribing to
+    caps_1: "video/x-raw,framerate="
+    capr_2: "/1,width=640,height=480"
+                               # Set the caps to be applied after getting the ROS2 Image and before the x265 encoder. Ignore
+                               # framerate setting here.
     port: "8554"
-    local_only: True           # True = rtsp://127.0.0.1:port (The stream is accessible only from the local machine)
+    local_only: True           # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)
                                # False = rtsp://0.0.0.0:portAndMountpoint (The stream is accessible from the outside) 
                                # For example, to access the stream running on the machine with IP = 192.168.20.20,
                                # use rtsp://192.186.20.20:portAndMountpoint
-                               # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)
-  - Save your configuration and navigate to `image2rtsp ` colcon root, source and build the package:
+  - Save your configuration and navigate to `ros2_ws` colcon root, source and build the package:
       ```bashrc
       cd ~/ros2_ws/
       colcon build --packages-select image2rtsp

@@ -131,7 +131,7 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
                                "format", G_TYPE_STRING, format->second.c_str(),
                                "width", G_TYPE_INT, msg->width,
                                "height", G_TYPE_INT, msg->height,
-                               "framerate", GST_TYPE_FRACTION, 10, 1,
+                               "framerate", GST_TYPE_FRACTION, stoi(framerate), 1,
                                nullptr);
 }
 
