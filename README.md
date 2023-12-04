@@ -6,7 +6,7 @@ This project enables the conversion of a selected ROS2 topic of type `sensor_msg
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
 
-You are reading now the README for a **default** ROS2 Foxy package. If you want to use this package written as a ROS2 Foxy component, checkout `ros2_component` branch. 
+You are reading now the README for a **default** ROS2 Foxy package. If you want to use this package written as a ROS2 Foxy component, checkout `ros2_component_foxy` branch. 
 ## Dependencies
 - ROS2 foxy
 
@@ -23,10 +23,10 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Clone the package and then navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://gitlab.rhrk.uni-kl.de/dmalad/image2rtsp.git
+      git clone https://github.com/45kmh/image2rtsp.git
       cd image2rtsp/
       ```
-  - To use the package as a **component** with ROS2 checkout **ros2_component** branch (Dont forget to switch the README).
+  - To use the package as a **component** with ROS2 checkout **ros2_component_foxy** branch (Dont forget to switch the README).
       ```bashrc
       git checkout ros2_component
       ```
@@ -83,7 +83,6 @@ ros2 launch image2rtsp rtsp.launch.py
 - Some machines may have a significantly bigger delay of about 150-200ms. The reason is currently unknown.
 - Its possible to use this package with Humble if ROS2 parameters are hardcoded as variables. 
 ## To Do
-- Add a branch with the package rewritten as a ROS2 component
 - Port the package to Nvidia Jetson Orin. Will the use of the Nvidia encoder make the delay smaller?
 - Port packages to ROS2 Humble.
 - Complete the functionality according to the functionality of the original ROS package.
