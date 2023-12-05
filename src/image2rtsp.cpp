@@ -9,14 +9,14 @@ using std::placeholders::_1;
 
 Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     // Declare and get the parameters
-    this->declare_parameter("topic");
-    this->declare_parameter("mountpoint");
-    this->declare_parameter("bitrate");
-    this->declare_parameter("framerate");
-    this->declare_parameter("caps_1");
-    this->declare_parameter("caps_2");
-    this->declare_parameter("port");
-    this->declare_parameter("local_only");
+    this->declare_parameter("topic", "/color/image_raw");
+    this->declare_parameter("mountpoint", "/back");
+    this->declare_parameter("bitrate", "500");
+    this->declare_parameter("framerate", "30");
+    this->declare_parameter("caps_1", "video/x-raw, framerate =");
+    this->declare_parameter("caps_2", "/1,width=640,height=480");
+    this->declare_parameter("port", "8554");
+    this->declare_parameter("local_only", true);
 
     topic = this->get_parameter("topic").as_string();
     mountpoint = this->get_parameter("mountpoint").as_string();
@@ -26,14 +26,6 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     caps_2 = this->get_parameter("caps_2").as_string();
     port = this->get_parameter("port").as_string();
     local_only = this->get_parameter("local_only").as_bool();
-
-    // Check if the parameter is set, since no default value is provided
-    if (!this->has_parameter("topic") || !this->has_parameter("mountpoint") || !this->has_parameter("bitrate") || 
-        !this->has_parameter("framerate") || !this->has_parameter("caps_1") || !this->has_parameter("caps_2") || 
-        !this->has_parameter("port") || !this->has_parameter("local_only")){
-        rclcpp::shutdown(); // Shutdown the node if there are some issues with launch file
-        return;
-    }
 
     // Start the subscription
     subscription_ = this->create_subscription<sensor_msgs::msg::Image>(topic, 10, std::bind(&Image2rtsp::topic_callback, this, _1));
@@ -52,16 +44,8 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
 
 int main(int argc, char *argv[]){
     rclcpp::init(argc, argv);
-    try{
-        auto node = std::make_shared<Image2rtsp>();
-        if (rclcpp::ok()){
-            rclcpp::spin(node);
-        }
-    }catch (const std::exception &e){
-        RCLCPP_INFO(rclcpp::get_logger("image2rtsp"), "One or more required parameters are not set, or set incorrectly. Shutting down the node.");
-        RCLCPP_INFO(rclcpp::get_logger("image2rtsp"), "Tip: Start the node only using launch file. Also rebuild after making changes in the YAML file");
-        RCLCPP_ERROR(rclcpp::get_logger("image2rtsp"), "Parameter is not set: %s", e.what());
-    }
+    auto node = std::make_shared<Image2rtsp>();
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }
