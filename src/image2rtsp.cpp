@@ -16,7 +16,7 @@ Image2rtsp::Image2rtsp(const rclcpp::NodeOptions & options) : Node("image2rtsp")
     rtsp_server = rtsp_server_create(port, local_only);
     appsrc = NULL;
     // Setup the pipeline
-    pipeline_head = "( appsrc name=imagesrc do-timestamp=true min-latency=0 max-latency=0 max-bytes=1000 is-live=true ! videoconvert ! ";
+    pipeline_head = "( appsrc name=imagesrc do-timestamp=true min-latency=0 max-latency=0 max-bytes=1000 is-live=true ! videoconvert ! videoscale ! ";
     pipeline_tail = "key-int-max=30 ! video/x-h264, profile=baseline ! rtph264pay name=pay0 pt=96 )";
     pipeline = pipeline_head + caps + " ! x264enc tune=zerolatency bitrate=" + bitrate + pipeline_tail;
     rtsp_server_add_url(mountpoint.c_str(), pipeline.c_str(), (GstElement **)&(appsrc));
