@@ -4,11 +4,11 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 ## image2rtsp
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
 
-The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
+The development is being carried out on Ubuntu 20.04 with ROS2 Foxy, also tested on Ubuntu 22.04 with ROS2 Humble.
 
-You are reading now the README for a **default** ROS2 Foxy package. If you want to use this package written as a ROS2 Foxy component, checkout `ros2_component_foxy` branch. 
+You are reading now the README for a **default** ROS2 package. If you want to use this package written as a ROS2 component, checkout `ros2_component` branch. 
 ## Dependencies
-- ROS2 foxy
+- ROS2 Foxy/Humble
 
 - gstreamer libs:
 ```bash
@@ -23,14 +23,8 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Clone the package and then navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://github.com/45kmh/image2rtsp.git
-      cd image2rtsp/
+      git clone https://github.com/45kmh/image2rtsp.git --single-branch
       ```
-  - To use the package as a **component** with ROS2 checkout **ros2_component_foxy** branch (Dont forget to switch the README).
-      ```bashrc
-      git checkout ros2_component_foxy
-      ```
-  - To use the package as a **simple subscriber** with ROS2 Foxy stay on the `master` branch and follow the instructions.
   - Check the framerate of the topic to be subscribed:
       ```bashrc
       ros2 topic hz /someTopic
@@ -81,9 +75,6 @@ ros2 launch image2rtsp rtsp.launch.py
 ## Limitations
 - As was previously mentioned, this package allows the conversion of only one topic into an RTSP Stream.
 - Some machines may have a significantly bigger delay of about 150-200ms. The reason is currently unknown.
-- Its possible to use this package with Humble if ROS2 parameters are hardcoded as variables. 
 ## To Do
 - Port the package to Nvidia Jetson Orin. Will the use of the Nvidia encoder make the delay smaller?
-- Port packages to ROS2 Humble.
 - Complete the functionality according to the functionality of the original ROS package.
-
