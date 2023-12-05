@@ -4,12 +4,12 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 ## image2rtsp
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
 
-The development is being carried out on Ubuntu 20.04 with ROS2 Foxy.
+The development is being carried out on Ubuntu 20.04 with ROS2 Foxy, also tested on Ubuntu 22.04 with ROS2 Humble. 
 
-You are reading now the README for a package written as a ROS2 Foxy **component**. If you want to use this package as a default ROS2 Foxy package, checkout `master_foxy` branch. 
+You are reading now the README for a package written as a ROS2 **component**. To know about ROS2 components you can look into the official documentation ([link1](https://docs.ros.org/en/foxy/Concepts/About-Composition.html), [link2](https://docs.ros.org/en/foxy/Tutorials/Intermediate/Composition.html)). If you want to use this package as a default ROS2 package, checkout `master` branch. 
 
 ## Dependencies
-- ROS2 foxy
+- ROS2 Foxy/Humble
 
 - gstreamer libs:
 ```bash
@@ -24,13 +24,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Clone the package and navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://github.com/45kmh/image2rtsp.git
-      cd image2rtsp/
-      ```
-  - To use the package as a **simple subscriber** with ROS2 Foxy stay on the main (Dont forget to switch the README).
-  - To use the package as a **component** with ROS2 checkout **ros2_component** branch.
-      ```bashrc
-      git checkout ros2_component_foxy
+      git clone https://github.com/45kmh/image2rtsp.git -b ros2_component
       ```
   - Check the framerate of the topic to be subscribed:
       ```bashrc
@@ -91,6 +85,4 @@ ros2 launch image2rtsp rtsp.launch.py
 - Some machines may have a significantly bigger delay of about 150-200ms. The reason is currently unknown.
 ## To Do
 - Port the package to Nvidia Jetson Orin. Will the use of the Nvidia encoder make the delay smaller?
-- Port packages to ROS2 Humble.
 - Complete the functionality according to the functionality of the original ROS package.
-
