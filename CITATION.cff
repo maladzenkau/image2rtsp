@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+preferred-citation:
+  type: software
+  message: If you use this software, please cite it as below.
+  authors:
+  - family-names: Maladzenkau
+    given-names: Dzmitry
+  title: "image2rtsp"
+  version: 1.0
+  date-released: 2023-27-11
+  license: BSD 3-Clause
+  url: "https://github.com/45kmh/image2rtsp"
