@@ -24,7 +24,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       ```
   - Clone the package and navigate into the directory `image2rtsp`:
       ```bashrc
-      git clone https://github.com/45kmh/image2rtsp.git -b ros2_component
+      git clone https://github.com/maladzenkau/image2rtsp.git -b ros2_component
       ```
   - Check the framerate of the topic to be subscribed:
       ```bashrc
