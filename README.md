@@ -74,7 +74,7 @@ ros2 launch image2rtsp rtsp.launch.py
 ```
 ## Limitations
 - As was previously mentioned, this package allows the conversion of only one topic into an RTSP Stream.
-- Some machines may have a significantly bigger delay of about 150-200ms. The reason is currently unknown.
 ## To Do
-- Port the package to Nvidia Jetson Orin. Will the use of the Nvidia encoder make the delay smaller?
-- Complete the functionality according to the functionality of the original ROS package.
+- Add the camera directly as a source
+- Add web camera ros2 topic formats
+- Add compressed images formats (jpeg, png)
