@@ -15,6 +15,7 @@ public:
     GstRTSPServer *rtsp_server;
 
 private:
+    string source;
     string topic;
     string mountpoint;
     string bitrate;
@@ -26,6 +27,7 @@ private:
     string pipeline_head;
     string pipeline_tail;
     bool local_only;
+    bool camera;
     GstAppSrc *appsrc;
 
     void video_mainloop_start();
