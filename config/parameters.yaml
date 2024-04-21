@@ -2,7 +2,7 @@
    ros__parameters:
 
       # If camera serves as a source
-      camera: True
+      camera: False
       source: "v4l2src device=/dev/video0"
 
       # If the source is a ros2 topic
