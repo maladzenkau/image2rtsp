@@ -2,7 +2,9 @@
 This project is a migration from ROS1 to ROS2. The original code was developed by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/tree/master). I would like to express my gratitude for his contribution.
 
 ## image2rtsp
-This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 30-50ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
+This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 300-500ms. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring, and more. Please note that the migration process is ongoing, and therefore, the complete functionality of the original package is not yet available.
+
+Currently supported formats: "RGB", "RGB16", "RGBA", "RGBA16", "BGR", "BGR16", "BGRA", "BGRA16", "GRAY8", "GRAY16_LE".
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy, also tested on Ubuntu 22.04 with ROS2 Humble. 
 
