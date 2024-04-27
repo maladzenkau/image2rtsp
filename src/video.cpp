@@ -118,6 +118,7 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
         {sensor_msgs::image_encodings::BGRA16, "BGRA16"},
         {sensor_msgs::image_encodings::MONO8, "GRAY8"},
         {sensor_msgs::image_encodings::MONO16, "GRAY16_LE"},
+        {sensor_msgs::image_encodings::YUV422, "YUY2"},
     };
 
     if (msg->is_bigendian){
