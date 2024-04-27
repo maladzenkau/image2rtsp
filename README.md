@@ -84,5 +84,4 @@ ros2 launch image2rtsp rtsp.launch.py
 ## Limitations
 - As was previously mentioned, this package allows the conversion of only data source into an RTSP Stream.
 ## To Do
-- Add web camera ros2 topic formats
 - Add compressed images formats (jpeg, png)
