@@ -1,4 +1,4 @@
-#include "rclcpp/rclcpp.hpp" 
+#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
