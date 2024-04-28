@@ -1,4 +1,4 @@
-## Acknowledgement 
+## Acknowledgement
 This project is a migration from ROS1 to ROS2. The original code was developed by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/tree/master). I would like to express my gratitude for his contribution.
 
 ## image2rtsp
