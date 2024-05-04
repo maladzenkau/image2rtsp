@@ -82,7 +82,5 @@ cd ~/ros2_ws/
 source install/setup.bash
 ros2 launch image2rtsp rtsp.launch.py 
 ```
-## Limitations
-- As was previously mentioned, this package allows the conversion of only data source into an RTSP Stream.
 ## To Do
 - Add compressed images formats (jpeg, png)
