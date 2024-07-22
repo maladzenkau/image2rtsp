@@ -19,6 +19,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(PkgConfig REQUIRED)
 pkg_check_modules(GST REQUIRED 
   gstreamer-1.0
   gstreamer-app-1.0
