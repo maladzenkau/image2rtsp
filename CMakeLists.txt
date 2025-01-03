@@ -23,11 +23,14 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(OpenCV REQUIRED)
 pkg_check_modules(GST REQUIRED 
   gstreamer-1.0
   gstreamer-app-1.0
   gstreamer-rtsp-server-1.0
 )
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 file(GLOB SOURCES src/video.cpp)
 
 add_executable(image2rtsp src/image2rtsp.cpp ${SOURCES})
@@ -37,7 +40,8 @@ include_directories(
   ${GST_INCLUDE_DIRS}
   )
 target_link_libraries(image2rtsp 
-  ${GST_LIBRARIES} 
+  ${GST_LIBRARIES}
+  ${OpenCV_LIBS}
   )
 
 install(TARGETS

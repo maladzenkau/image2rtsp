@@ -6,7 +6,8 @@
       source: "v4l2src device=/dev/video0"
 
       # If the source is a ros2 topic (default case)
-      topic: "/color/image_raw"
+      compressed: True
+      topic: "/image_raw/compressed"
 
       # General setup
       mountpoint: "/back"

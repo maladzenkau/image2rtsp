@@ -19,6 +19,7 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     this->declare_parameter("port", "8554");
     this->declare_parameter("local_only", true);
     this->declare_parameter("camera", false);
+    this->declare_parameter("compressed", false);
 
     source = this->get_parameter("source").as_string();
     topic = this->get_parameter("topic").as_string();
@@ -30,9 +31,15 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     port = this->get_parameter("port").as_string();
     local_only = this->get_parameter("local_only").as_bool();
     camera = this->get_parameter("camera").as_bool();
+    compressed = this->get_parameter("compressed").as_bool();
 
     // Start the subscription
-    subscription_ = this->create_subscription<sensor_msgs::msg::Image>(topic, 10, std::bind(&Image2rtsp::topic_callback, this, _1));
+    if (compressed == false){
+        subscription_ = this->create_subscription<sensor_msgs::msg::Image>(topic, 10, std::bind(&Image2rtsp::topic_callback, this, _1));
+    }
+    else{
+        subscription_compressed_ = this->create_subscription<sensor_msgs::msg::CompressedImage>(topic, 10, std::bind(&Image2rtsp::compressed_topic_callback, this, _1));
+    }
 
     // Start the RTSP server
     video_mainloop_start();

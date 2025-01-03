@@ -168,3 +168,43 @@ void Image2rtsp::topic_callback(const sensor_msgs::msg::Image::SharedPtr msg){
         gst_app_src_push_buffer(appsrc, buf);
     }
 }
+
+void Image2rtsp::compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg){
+    if (appsrc == NULL) return;
+    // Decompress the image
+    cv::Mat img = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_UNCHANGED);
+    if (img.empty()) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to decompress image");
+        return;
+    }
+
+    // Determine the GStreamer caps
+    std::string gst_format;
+    switch (img.type()) {
+        case CV_8UC3: gst_format = "RGB"; break; // RGB images
+        case CV_8UC4: gst_format = "RGBA"; break; // RGBA images
+        case CV_8UC1: gst_format = "GRAY8"; break; // Grayscale images
+        default:
+            RCLCPP_ERROR(this->get_logger(), "Unsupported image type");
+            return;
+    }
+
+    GstCaps *caps = gst_caps_new_simple("video/x-raw",
+                                        "format", G_TYPE_STRING, gst_format.c_str(),
+                                        "width", G_TYPE_INT, img.cols,
+                                        "height", G_TYPE_INT, img.rows,
+                                        "framerate", GST_TYPE_FRACTION, stoi(framerate), 1,
+                                        nullptr);
+
+    // Set caps on appsrc
+    gst_app_src_set_caps(appsrc, caps);
+    gst_caps_unref(caps);
+
+    // Create a GstBuffer and fill it with the image data
+    GstBuffer *buf = gst_buffer_new_allocate(nullptr, img.total() * img.elemSize(), nullptr);
+    gst_buffer_fill(buf, 0, img.data, img.total() * img.elemSize());
+    GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
+
+    // Push the buffer to GStreamer
+    gst_app_src_push_buffer(appsrc, buf);
+}
