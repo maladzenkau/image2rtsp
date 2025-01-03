@@ -4,7 +4,9 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 ## image2rtsp
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` into an `RTSP` stream, with an anticipated delay of approximately 0,3-0,4s. It also supports usb camera as a direct source. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring and more.
 
-Currently supported `sensor_msgs::msg::Image` formats: "**rgb8**", "**rgba8**", "**rgb16**", "**rgba16**", "**bgr8**", "**bgra8**", "**bgr16**", "**bgra16**", "**mono8**", "**mono16**", "**yuv422_yuy2**".
+Currently supported `sensor_msgs::msg::Image` formats: "**rgb8**", "**rgba8**", "**rgb16**", "**rgba16**", "**bgr8**", "**bgra8**", "**bgr16**", "**bgra16**", "**mono8**", "**mono16**", "**yuv422_yuy2**". 
+Support for **Compressed images** is added on the *dev* branch.
+
 (if you need some specific unsupported format, create an issue and i will try to add it as soon as possible)
 
 The development is being carried out on Ubuntu 20.04 with ROS2 Foxy, also tested on Ubuntu 22.04 with ROS2 Humble.
@@ -82,5 +84,3 @@ cd ~/ros2_ws/
 source install/setup.bash
 ros2 launch image2rtsp rtsp.launch.py 
 ```
-## To Do
-- Add compressed images formats (jpeg, png)
