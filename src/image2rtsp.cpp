@@ -39,7 +39,7 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     rtsp_server = rtsp_server_create(port, local_only);
     appsrc = NULL;
     // Setup the pipeline
-    pipeline_tail = "key-int-max=30 ! video/x-h264, profile=baseline ! rtph264pay name=pay0 pt=96 )";
+    pipeline_tail = " key-int-max=30 ! video/x-h264, profile=baseline ! rtph264pay name=pay0 pt=96 )";
     if (camera == false){
         pipeline_head = "( appsrc name=imagesrc do-timestamp=true min-latency=0 max-latency=0 max-bytes=1000 is-live=true ! videoconvert ! videoscale ! ";
         pipeline = pipeline_head + caps_1 + framerate + caps_2 + " ! x264enc tune=zerolatency bitrate=" + bitrate + pipeline_tail;
