@@ -60,6 +60,11 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
                                # False = rtsp://0.0.0.0:portAndMountpoint (The stream is accessible from the outside) 
                                # For example, to access the stream running on the machine with IP = 192.168.20.20,
                                # use rtsp://192.186.20.20:portAndMountpoint
+    encoder: "software"        # Which encoder to use, "hardware" automatically selects an available hardware encoder.
+                               # Use "nvidia", "intel" or "amd" to force an encoder if available.
+                               # Use "software" to force the software encoder.
+                               # Always falls back to software if a hardware encoder can't be found.
+                               # Defaults to "software".
   - Save your configuration and navigate to `ros2_ws` colcon root, source and build the package:
       ```bashrc
       cd ~/ros2_ws/

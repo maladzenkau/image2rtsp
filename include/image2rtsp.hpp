@@ -28,8 +28,10 @@ private:
     string pipeline_tail;
     bool local_only;
     bool camera;
+    string encoder;
     GstAppSrc *appsrc;
 
+    std::string get_encoder_pipeline();
     void video_mainloop_start();
     void rtsp_server_add_url(const char *url, const char *sPipeline, GstElement **appsrc);
     void topic_callback(const sensor_msgs::msg::Image::SharedPtr msg);
