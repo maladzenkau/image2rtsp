@@ -11,7 +11,7 @@
 #include <algorithm>
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
-#include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 using namespace std;
 

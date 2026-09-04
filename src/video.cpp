@@ -4,7 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <stdexcept>
 
-#include "../include/image2rtsp.hpp"
+#include "image2rtsp.hpp"
 #include <sensor_msgs/image_encodings.hpp>
 
 using namespace std;

@@ -3,7 +3,7 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
-#include "../include/image2rtsp.hpp"
+#include "image2rtsp.hpp"
 #ifdef __GLIBC__
 #include <malloc.h>
 #endif
