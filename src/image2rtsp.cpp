@@ -63,13 +63,18 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
     // Start the RTSP server
     video_mainloop_start();
     rtsp_server = rtsp_server_create(port, local_only);
-    appsrc = NULL;
 
     pipeline = camera ? camera_pipeline : default_pipeline;
     framerate = extract_framerate(pipeline, 30);
-    rtsp_server_add_url(mountpoint.c_str(), pipeline.c_str(), camera ? nullptr : (GstElement **)&appsrc);
+    rtsp_server_add_url(mountpoint.c_str(), pipeline.c_str());
 
-    RCLCPP_INFO(this->get_logger(), "Stream available at rtsp://%s:%s%s", gst_rtsp_server_get_address(rtsp_server), port.c_str(), mountpoint.c_str());
+    const char *server_address = gst_rtsp_server_get_address(rtsp_server);
+    if (local_only) {
+        RCLCPP_INFO(this->get_logger(), "Stream available at rtsp://%s:%s%s", server_address, port.c_str(), mountpoint.c_str());
+    } else {
+        RCLCPP_INFO(this->get_logger(), "RTSP server bound to %s:%s%s", server_address, port.c_str(), mountpoint.c_str());
+        RCLCPP_INFO(this->get_logger(), "Connect clients using rtsp://<host-ip>:%s%s (0.0.0.0 is bind-only)", port.c_str(), mountpoint.c_str());
+    }
 }
 
 uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_framerate = 30) {

@@ -38,7 +38,7 @@ GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, const boo
     return server;
 }
 
-void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline, GstElement **appsrc){
+void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline){
     GstRTSPMountPoints *mounts;
     GstRTSPMediaFactory *factory;
 
@@ -55,7 +55,8 @@ void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline, Gst
 
     /* notify when our media is ready, This is called whenever someone asks for
      * the media and a new pipeline is created */
-    g_signal_connect(factory, "media-configure", (GCallback)media_configure, appsrc);
+    // Pass `this` as user_data so media_configure can register the media's appsrc on the node
+    g_signal_connect(factory, "media-configure", (GCallback)media_configure, this);
 
     gst_rtsp_media_factory_set_shared(factory, TRUE);
 
@@ -66,17 +67,46 @@ void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline, Gst
     g_object_unref(mounts);
 }
 
-static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, GstElement **appsrc){
-    if(appsrc){
-        GstElement *pipeline = gst_rtsp_media_get_element(media);
+struct MediaCleanupData {
+    Image2rtsp *node;
+    GstAppSrc *appsrc;
+};
 
-        *appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "imagesrc");
+static void media_unprepared(GstRTSPMedia *media, gpointer user_data){
+    MediaCleanupData *data = static_cast<MediaCleanupData*>(user_data);
+    {
+        std::lock_guard<std::mutex> lock(data->node->appsrc_mutex);
+        auto &list = data->node->appsrc_list;
+        list.erase(std::remove(list.begin(), list.end(), data->appsrc), list.end());
+    }
+    gst_object_unref(data->appsrc);
+    delete data;
+}
 
-        /* this instructs appsrc that we will be dealing with timed buffer */
-        gst_util_set_object_arg(G_OBJECT(*appsrc), "format", "time");
+static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data){
+    Image2rtsp *node = static_cast<Image2rtsp*>(user_data);
+    GstElement *pipeline = gst_rtsp_media_get_element(media);
+    GstElement *imagesrc = gst_bin_get_by_name(GST_BIN(pipeline), "imagesrc");
+    gst_object_unref(pipeline);
 
-        gst_object_unref(pipeline);
-    }else{
+    if (imagesrc){
+        GstAppSrc *appsrc = GST_APP_SRC(imagesrc);
+
+        gst_util_set_object_arg(G_OBJECT(appsrc), "format", "time");
+        gst_app_src_set_stream_type(appsrc, GST_APP_STREAM_TYPE_STREAM);
+        gst_app_src_set_max_buffers(appsrc, 0);
+        gst_app_src_set_max_bytes(appsrc, 0);
+        gst_app_src_set_max_time(appsrc, 0);
+
+        {
+            std::lock_guard<std::mutex> lock(node->appsrc_mutex);
+            node->appsrc_list.push_back(appsrc);
+        }
+
+        auto *cleanup = new MediaCleanupData{node, appsrc};
+        g_signal_connect(media, "unprepared", G_CALLBACK(media_unprepared), cleanup);
+        return;
+    } else {
         guint i, n_streams;
         n_streams = gst_rtsp_media_n_streams(media);
 
@@ -149,41 +179,44 @@ static gboolean session_cleanup(Image2rtsp *node, rclcpp::Logger logger, gboolea
     {
         char s[32];
         snprintf(s, 32, (char *)"Sessions cleaned: %d", num);
-        RCLCPP_INFO(node->get_logger(), s);
+        RCLCPP_DEBUG(node->get_logger(), s);
     }
     return TRUE;
 }
 
 void Image2rtsp::topic_callback(const sensor_msgs::msg::Image::SharedPtr msg){
-    GstBuffer *buf;
-    GstCaps *caps; // image properties. see return of Image2rtsp::gst_caps_new_from_image
-    char *gst_type, *gst_format = (char *)"";
-    if (appsrc != NULL){
-        // Set caps from message
-        caps = gst_caps_new_from_image(msg);
+    std::lock_guard<std::mutex> lock(appsrc_mutex);
+    if (appsrc_list.empty()) return;
+
+    RCLCPP_DEBUG(this->get_logger(), "Received image %dx%d, encoding=%s", msg->width, msg->height, msg->encoding.c_str());
+    GstCaps *caps = gst_caps_new_from_image(msg);
+    if (!caps) return;
+
+    for (GstAppSrc *appsrc : appsrc_list){
         gst_app_src_set_caps(appsrc, caps);
-        buf = gst_buffer_new_allocate(nullptr, msg->data.size(), nullptr);
+        GstBuffer *buf = gst_buffer_new_allocate(nullptr, msg->data.size(), nullptr);
         gst_buffer_fill(buf, 0, msg->data.data(), msg->data.size());
         GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
         gst_app_src_push_buffer(appsrc, buf);
     }
+    gst_caps_unref(caps);
 }
 
 void Image2rtsp::compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg){
-    if (appsrc == NULL) return;
-    // Decompress the image
+    std::lock_guard<std::mutex> lock(appsrc_mutex);
+    if (appsrc_list.empty()) return;
+
     cv::Mat img = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_UNCHANGED);
     if (img.empty()) {
         RCLCPP_ERROR(this->get_logger(), "Failed to decompress image");
         return;
     }
 
-    // Determine the GStreamer caps
     std::string gst_format;
     switch (img.type()) {
-        case CV_8UC3: gst_format = "BGR"; break;    // BGR images
-        case CV_8UC4: gst_format = "RGBA"; break;   // RGBA images
-        case CV_8UC1: gst_format = "GRAY8"; break;  // Grayscale images
+        case CV_8UC3: gst_format = "BGR"; break;
+        case CV_8UC4: gst_format = "RGBA"; break;
+        case CV_8UC1: gst_format = "GRAY8"; break;
         default:
             RCLCPP_ERROR(this->get_logger(), "Unsupported image type");
             return;
@@ -196,15 +229,12 @@ void Image2rtsp::compressed_topic_callback(const sensor_msgs::msg::CompressedIma
                                         "framerate", GST_TYPE_FRACTION, framerate, 1,
                                         nullptr);
 
-    // Set caps on appsrc
-    gst_app_src_set_caps(appsrc, caps);
+    for (GstAppSrc *appsrc : appsrc_list){
+        gst_app_src_set_caps(appsrc, caps);
+        GstBuffer *buf = gst_buffer_new_allocate(nullptr, img.total() * img.elemSize(), nullptr);
+        gst_buffer_fill(buf, 0, img.data, img.total() * img.elemSize());
+        GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
+        gst_app_src_push_buffer(appsrc, buf);
+    }
     gst_caps_unref(caps);
-
-    // Create a GstBuffer and fill it with the image data
-    GstBuffer *buf = gst_buffer_new_allocate(nullptr, img.total() * img.elemSize(), nullptr);
-    gst_buffer_fill(buf, 0, img.data, img.total() * img.elemSize());
-    GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
-
-    // Push the buffer to GStreamer
-    gst_app_src_push_buffer(appsrc, buf);
 }
