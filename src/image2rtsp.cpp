@@ -114,8 +114,14 @@ uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_fra
 
 int main(int argc, char *argv[]){
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<Image2rtsp>();
-    rclcpp::spin(node);
+    int rc = 0;
+    try {
+        auto node = std::make_shared<Image2rtsp>();
+        rclcpp::spin(node);
+    } catch (const std::exception &e) {
+        RCLCPP_FATAL(rclcpp::get_logger("image2rtsp"), "%s", e.what());
+        rc = 1;
+    }
     rclcpp::shutdown();
-    return 0;
+    return rc;
 }

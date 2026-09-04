@@ -2,6 +2,7 @@
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
 #include <rclcpp/rclcpp.hpp>
+#include <stdexcept>
 
 #include "../include/image2rtsp.hpp"
 #include "../include/image_encodings.h"
@@ -32,7 +33,13 @@ GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, const boo
     if (local_only){
     g_object_set(server, "address", "127.0.0.1", NULL);
     }
-    gst_rtsp_server_attach(server, NULL);
+    if (gst_rtsp_server_attach(server, NULL) == 0){
+        gchar *address = gst_rtsp_server_get_address(server);
+        std::string msg = "Could not bind the RTSP server to " + std::string(address) + ":" + port + " (is the port already in use?)";
+        g_free(address);
+        g_object_unref(server);
+        throw std::runtime_error(msg);
+    }
     /* add a timeout for the session cleanup */
     g_timeout_add_seconds(2, (GSourceFunc)session_cleanup, this);
     return server;
