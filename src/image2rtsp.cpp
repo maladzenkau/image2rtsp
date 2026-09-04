@@ -4,6 +4,9 @@
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
 #include "../include/image2rtsp.hpp"
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 using std::placeholders::_1;
 
@@ -113,6 +116,14 @@ uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_fra
 }
 
 int main(int argc, char *argv[]){
+#ifdef __GLIBC__
+    // Every RTSP media pipeline starts a new set of threads, and glibc gives each
+    // thread its own malloc arena whose freed memory is not returned to the OS.
+    // With clients connecting and disconnecting this grew by ~5 MB per cycle;
+    // a single arena keeps it flat at no measurable CPU cost. Must run before
+    // any thread is created.
+    mallopt(M_ARENA_MAX, 1);
+#endif
     rclcpp::init(argc, argv);
     int rc = 0;
     try {
