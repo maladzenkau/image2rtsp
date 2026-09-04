@@ -92,16 +92,13 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
       Don't use **`ros2 run`**!
     
 ## Check the stream
-To check the stream, follow the instructions for gstreamer, mpv or VLC provided by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/blob/master/README.md) or use python script provided in this package (ensure before that the open-cv library is installed, if not `pip install opencv-python`). Open new terminal, ensure that the topic to be converted exists and the RTSP stream is running. Then:
-```bash
-gedit ~/ros2_ws/src/image2rtsp/python/rtsp.py
-```
-Replace the `rtsp://127.0.0.1:8554/back` with your server's IP address, port and mount point `rtsp://YOUR_IP:PORT/MOUNT_POINT`. Save and run:
+To check the stream, follow the instructions for gstreamer, mpv or VLC provided by [CircusMonkey](https://github.com/CircusMonkey/ros_rtsp/blob/master/README.md) or use the viewer script provided in this package (it needs the OpenCV Python bindings: `sudo apt install python3-opencv`). Open a new terminal, ensure that the topic to be converted exists and the RTSP stream is running. Then:
 ```bash
 cd ~/ros2_ws/
 source install/setup.bash
-ros2 launch image2rtsp rtsp.launch.py 
+ros2 launch image2rtsp rtsp.launch.py url:=rtsp://127.0.0.1:8554/back
 ```
+Replace the URL with your server's IP address, port and mount point (`rtsp://YOUR_IP:PORT/MOUNT_POINT`). Press `q` in the video window to quit.
 ## Note
 
 - The YAML configuration allows you to fully customize the pipeline according to your needs (Useful insights can be found, for example, [here](https://github.com/maladzenkau/image2rtsp/pull/9)). This package does not provide any built-in acceleration. As its stability has not been validated across a wide range of Linux systems using advanced hardware or software techniques, support for such configurations is left to the user. There are no plans to update the package to support GPU/CPU acceleration. Please do not open issues related to software/hardware acceleration if they are directly related to the GStreamer pipeline itself. 

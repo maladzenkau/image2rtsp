@@ -35,12 +35,7 @@ install(DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
 )
 
-# Install Python modules
-ament_python_install_package(python)
-
-# Install Python executables
-install(PROGRAMS
-  python/rtsp.py
+install(PROGRAMS scripts/rtsp.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

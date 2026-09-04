@@ -1,16 +1,16 @@
-from launch import LaunchDescription
-from launch.actions import ExecuteProcess
-from ament_index_python.packages import get_package_share_directory
 import os
 
-def generate_launch_description():
-    pkg_share = get_package_share_directory('image2rtsp')
-    script_path = os.path.join(pkg_share, '../../../../src/image2rtsp/python/rtsp.py')
+from ament_index_python.packages import get_package_prefix
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.substitutions import LaunchConfiguration
 
-    return LaunchDescription(
-        [
-            ExecuteProcess(
-                cmd=['python3', script_path],
-            ),
-        ]
-    )
+
+def generate_launch_description():
+    viewer = os.path.join(get_package_prefix('image2rtsp'), 'lib', 'image2rtsp', 'rtsp.py')
+
+    return LaunchDescription([
+        DeclareLaunchArgument('url', default_value='rtsp://127.0.0.1:8554/back',
+                              description='RTSP stream to display'),
+        ExecuteProcess(cmd=[viewer, LaunchConfiguration('url')], output='screen'),
+    ])
