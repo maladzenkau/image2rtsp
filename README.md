@@ -42,7 +42,7 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
 # Example ROS2 Image topic stream
     # If the source is a ros2 topic (default case)
       compressed:       False
-      topic:            "color/image_raw"
+      topic:            "/color/image_raw"
       default_pipeline: |
                         ( appsrc name=imagesrc do-timestamp=true min-latency=0 
                           max-latency=0 max-bytes=1000 is-live=true !
