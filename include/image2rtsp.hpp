@@ -45,8 +45,4 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr subscription_compressed_;
 };
 
-static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
-static void *mainloop(void *arg);
-static gboolean session_cleanup(Image2rtsp *node, rclcpp::Logger logger, gboolean ignored);
-
 #endif // IMAGE2RTSP_IMAGE2RTSP_HPP

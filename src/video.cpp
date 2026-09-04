@@ -9,10 +9,13 @@
 
 using namespace std;
 
-static void *mainloop(void *arg){
+static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
+static gboolean session_cleanup(gpointer user_data);
+
+static void *mainloop(void *){
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
     g_main_loop_run(loop);
-    g_main_destroy(loop);
+    g_main_loop_unref(loop);
     return NULL;
 }
 
@@ -41,7 +44,7 @@ GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, const boo
         throw std::runtime_error(msg);
     }
     /* add a timeout for the session cleanup */
-    g_timeout_add_seconds(2, (GSourceFunc)session_cleanup, this);
+    g_timeout_add_seconds(2, session_cleanup, this);
     return server;
 }
 
@@ -79,7 +82,7 @@ struct MediaCleanupData {
     GstAppSrc *appsrc;
 };
 
-static void media_unprepared(GstRTSPMedia *media, gpointer user_data){
+static void media_unprepared(GstRTSPMedia *, gpointer user_data){
     MediaCleanupData *data = static_cast<MediaCleanupData*>(user_data);
     {
         std::lock_guard<std::mutex> lock(data->node->appsrc_mutex);
@@ -90,7 +93,7 @@ static void media_unprepared(GstRTSPMedia *media, gpointer user_data){
     delete data;
 }
 
-static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data){
+static void media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpointer user_data){
     Image2rtsp *node = static_cast<Image2rtsp*>(user_data);
     GstElement *pipeline = gst_rtsp_media_get_element(media);
     GstElement *imagesrc = gst_bin_get_by_name(GST_BIN(pipeline), "imagesrc");
@@ -173,7 +176,8 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
                                nullptr);
 }
 
-static gboolean session_cleanup(Image2rtsp *node, rclcpp::Logger logger, gboolean ignored){
+static gboolean session_cleanup(gpointer user_data){
+    Image2rtsp *node = static_cast<Image2rtsp*>(user_data);
     GstRTSPServer *server = node->rtsp_server;
     GstRTSPSessionPool *pool;
     int num;
@@ -182,11 +186,8 @@ static gboolean session_cleanup(Image2rtsp *node, rclcpp::Logger logger, gboolea
     num = gst_rtsp_session_pool_cleanup(pool);
     g_object_unref(pool);
 
-    if (num > 0)
-    {
-        char s[32];
-        snprintf(s, 32, (char *)"Sessions cleaned: %d", num);
-        RCLCPP_DEBUG(node->get_logger(), s);
+    if (num > 0){
+        RCLCPP_DEBUG(node->get_logger(), "Sessions cleaned: %d", num);
     }
     return TRUE;
 }
