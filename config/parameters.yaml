@@ -13,8 +13,9 @@
                           video/x-h264, profile=baseline !
                           rtph264pay name=pay0 pt=96 )
 
-      # Notice: The framerate setting does not affect the RTSP stream — it entirely depends on the ros2 topic frequency. 
-      # It is included in the pipeline and code for structural reasons. You can likely remove it from the pipeline without impacting the package's behavior.
+      # Notice: Set framerate to the real rate of the ROS2 topic. The stream runs at the topic rate regardless,
+      # but x264enc's rate control uses this value: a framerate below the real rate roughly doubles the CPU
+      # usage and overshoots the configured bitrate.
 
 
       # If camera serves as a source
@@ -36,4 +37,4 @@
       local_only:       True     # True = rtsp://127.0.0.1:portAndMountpoint (The stream is accessible only from the local machine)
                                  # False = rtsp://0.0.0.0:portAndMountpoint (The stream is accessible from the outside) 
                                  # For example, to access the stream running on the machine with IP = 192.168.20.20,
-                                 # use rtsp://192.186.20.20:portAndMountpoint
+                                 # use rtsp://192.168.20.20:portAndMountpoint
