@@ -3,7 +3,10 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
-#include "../include/image2rtsp.hpp"
+#include "image2rtsp.hpp"
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 using std::placeholders::_1;
 
@@ -60,23 +63,31 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
         RCLCPP_INFO(this->get_logger(), "Trying to access camera device");
     }
 
-    // Start the RTSP server
-    video_mainloop_start();
+    // Set up the RTSP server. The GStreamer main loop thread is started last, so a
+    // failure here (e.g. the port is in use) can still be reported by throwing.
+    gst_init(NULL, NULL);
     rtsp_server = rtsp_server_create(port, local_only);
-    appsrc = NULL;
 
     pipeline = camera ? camera_pipeline : default_pipeline;
     framerate = extract_framerate(pipeline, 30);
-    rtsp_server_add_url(mountpoint.c_str(), pipeline.c_str(), camera ? nullptr : (GstElement **)&appsrc);
+    rtsp_server_add_url(mountpoint.c_str(), pipeline.c_str());
+    video_mainloop_start();
 
-    RCLCPP_INFO(this->get_logger(), "Stream available at rtsp://%s:%s%s", gst_rtsp_server_get_address(rtsp_server), port.c_str(), mountpoint.c_str());
+    gchar *server_address = gst_rtsp_server_get_address(rtsp_server);
+    if (local_only) {
+        RCLCPP_INFO(this->get_logger(), "Stream available at rtsp://%s:%s%s", server_address, port.c_str(), mountpoint.c_str());
+    } else {
+        RCLCPP_INFO(this->get_logger(), "RTSP server bound to %s:%s%s", server_address, port.c_str(), mountpoint.c_str());
+        RCLCPP_INFO(this->get_logger(), "Connect clients using rtsp://<host-ip>:%s%s (0.0.0.0 is bind-only)", port.c_str(), mountpoint.c_str());
+    }
+    g_free(server_address);
 }
 
-uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_framerate = 30) {
+unsigned int Image2rtsp::extract_framerate(const std::string& pipeline, unsigned int default_framerate) {
     std::string search_str = "framerate=";
     size_t pos = pipeline.find(search_str);
     if (pos == std::string::npos) {
-        RCLCPP_WARN(this->get_logger(), "Framerate not found in pipeline, using default: %d", default_framerate);
+        RCLCPP_WARN(this->get_logger(), "Framerate not found in pipeline, using default: %u", default_framerate);
         return default_framerate;
     }
 
@@ -84,7 +95,7 @@ uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_fra
 
     size_t end_pos = pipeline.find_first_of("/,", pos);
     if (end_pos == std::string::npos) {
-        RCLCPP_WARN(this->get_logger(), "Invalid framerate format in pipeline, using default: %d", default_framerate);
+        RCLCPP_WARN(this->get_logger(), "Invalid framerate format in pipeline, using default: %u", default_framerate);
         return default_framerate;
     }
 
@@ -94,23 +105,37 @@ uint Image2rtsp::extract_framerate(const std::string& pipeline, uint default_fra
     framerate_str.erase(framerate_str.find_last_not_of(" \t") + 1);
     
     try {
-        uint framerate = std::stoi(framerate_str);
+        int framerate = std::stoi(framerate_str);
         if (framerate <= 0) {
-            RCLCPP_WARN(this->get_logger(), "Invalid framerate value %d, using default: %d", framerate, default_framerate);
+            RCLCPP_WARN(this->get_logger(), "Invalid framerate value %d, using default: %u", framerate, default_framerate);
             return default_framerate;
         }
         RCLCPP_INFO(this->get_logger(), "Using set framerate %d", framerate);
-        return framerate;
+        return static_cast<unsigned int>(framerate);
     } catch (const std::exception& e) {
-        RCLCPP_WARN(this->get_logger(), "Failed to parse framerate '%s', using default: %d", framerate_str.c_str(), default_framerate);
+        RCLCPP_WARN(this->get_logger(), "Failed to parse framerate '%s', using default: %u", framerate_str.c_str(), default_framerate);
         return default_framerate;
     }
 }
 
 int main(int argc, char *argv[]){
+#ifdef __GLIBC__
+    // Every RTSP media pipeline starts a new set of threads, and glibc gives each
+    // thread its own malloc arena whose freed memory is not returned to the OS.
+    // With clients connecting and disconnecting this grew by ~5 MB per cycle;
+    // a single arena keeps it flat at no measurable CPU cost. Must run before
+    // any thread is created.
+    mallopt(M_ARENA_MAX, 1);
+#endif
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<Image2rtsp>();
-    rclcpp::spin(node);
+    int rc = 0;
+    try {
+        auto node = std::make_shared<Image2rtsp>();
+        rclcpp::spin(node);
+    } catch (const std::exception &e) {
+        RCLCPP_FATAL(rclcpp::get_logger("image2rtsp"), "%s", e.what());
+        rc = 1;
+    }
     rclcpp::shutdown();
-    return 0;
+    return rc;
 }

@@ -1,0 +1,28 @@
+# Required status check for the "Protect master" ruleset.
+# Pull requests into master are only accepted from this repository's dev branch.
+name: master guard
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, edited]
+
+permissions: {}
+
+jobs:
+  only-from-dev:
+    name: only-from-dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that the PR comes from this repository's dev branch
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" = "$BASE_REPO" ] && [ "$HEAD_REF" = "dev" ]; then
+            echo "OK: $HEAD_REPO:$HEAD_REF -> master"
+            exit 0
+          fi
+          echo "::error::Pull requests into master are only accepted from $BASE_REPO:dev (this one is from $HEAD_REPO:$HEAD_REF). Please retarget it to dev."
+          exit 1
