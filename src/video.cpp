@@ -35,6 +35,7 @@ Image2rtsp::~Image2rtsp(){
     std::lock_guard<std::mutex> lock(appsrc_mutex);
     for (GstAppSrc *appsrc : appsrc_list) gst_object_unref(appsrc);
     appsrc_list.clear();
+    if (caps) gst_caps_unref(caps);
 }
 
 GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, bool local_only){
@@ -155,12 +156,10 @@ void Image2rtsp::media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpo
     }
 }
 
-GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg, bool &reduce_to_8bit){
-    // ROS encoding -> GStreamer video/x-raw format (https://gstreamer.freedesktop.org/documentation/video/video-format.html).
-    // GStreamer has no 48-bit packed RGB, so rgb16/bgr16 are reduced to 8 bit by keeping the high byte of each sample.
-    struct Format { const char *gst; bool reduce_to_8bit; };
+const ImageFormat *Image2rtsp::format_from_encoding(const sensor_msgs::msg::Image &msg){
+    // ROS encoding -> GStreamer video/x-raw format (https://gstreamer.freedesktop.org/documentation/video/video-format.html)
     namespace enc = sensor_msgs::image_encodings;
-    static const std::map<std::string, Format> known_formats = {
+    static const std::map<std::string, ImageFormat> known_formats = {
         {enc::RGB8,        {"RGB",       false}},
         {enc::BGR8,        {"BGR",       false}},
         {enc::RGBA8,       {"RGBA",      false}},
@@ -181,24 +180,52 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
         {enc::NV24,        {"NV24",      false}},
     };
 
-    if (msg->is_bigendian){
+    if (msg.is_bigendian){
         RCLCPP_ERROR(this->get_logger(), "GST: big endian image format is not supported");
         return nullptr;
     }
 
-    auto format = known_formats.find(msg->encoding);
+    auto format = known_formats.find(msg.encoding);
     if (format == known_formats.end()){
-        RCLCPP_ERROR(this->get_logger(), "GST: image format '%s' unknown", msg->encoding.c_str());
+        RCLCPP_ERROR(this->get_logger(), "GST: image format '%s' unknown", msg.encoding.c_str());
         return nullptr;
     }
+    return &format->second;
+}
 
-    reduce_to_8bit = format->second.reduce_to_8bit;
-    return gst_caps_new_simple("video/x-raw",
-                               "format", G_TYPE_STRING, format->second.gst,
-                               "width", G_TYPE_INT, msg->width,
-                               "height", G_TYPE_INT, msg->height,
-                               "framerate", GST_TYPE_FRACTION, framerate, 1,
-                               nullptr);
+GstCaps *Image2rtsp::caps_for(const char *gst_format, int width, int height){
+    if (!caps || caps_format != gst_format || caps_width != width || caps_height != height){
+        if (caps) gst_caps_unref(caps);
+        caps = gst_caps_new_simple("video/x-raw",
+                                   "format", G_TYPE_STRING, gst_format,
+                                   "width", G_TYPE_INT, width,
+                                   "height", G_TYPE_INT, height,
+                                   "framerate", GST_TYPE_FRACTION, framerate, 1,
+                                   nullptr);
+        caps_format = gst_format;
+        caps_width = width;
+        caps_height = height;
+    }
+    return caps;
+}
+
+/* Wrap memory owned by `holder` in a read-only GstBuffer without copying it.
+ * The holder is deleted once the pipeline has released the buffer. */
+template <typename Holder>
+static GstBuffer *wrap_buffer(const void *data, size_t size, Holder *holder){
+    GstBuffer *buf = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY, const_cast<void*>(data), size, 0, size,
+                                                 holder, [](gpointer p){ delete static_cast<Holder*>(p); });
+    GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
+    return buf;
+}
+
+/* Hand one frame to every prepared media. Takes ownership of buf. Call with appsrc_mutex held. */
+void Image2rtsp::push_frame(GstBuffer *buf, GstCaps *frame_caps){
+    for (GstAppSrc *appsrc : appsrc_list){
+        gst_app_src_set_caps(appsrc, frame_caps);
+        gst_app_src_push_buffer(appsrc, gst_buffer_ref(buf));
+    }
+    gst_buffer_unref(buf);
 }
 
 gboolean Image2rtsp::session_cleanup(gpointer user_data){
@@ -222,65 +249,47 @@ void Image2rtsp::topic_callback(const sensor_msgs::msg::Image::SharedPtr msg){
     if (appsrc_list.empty()) return;
 
     RCLCPP_DEBUG(this->get_logger(), "Received image %dx%d, encoding=%s", msg->width, msg->height, msg->encoding.c_str());
-    bool reduce_to_8bit = false;
-    GstCaps *caps = gst_caps_new_from_image(msg, reduce_to_8bit);
-    if (!caps) return;
+    const ImageFormat *format = format_from_encoding(*msg);
+    if (!format) return;
 
-    const uint8_t *data = msg->data.data();
-    size_t size = msg->data.size();
-    std::vector<uint8_t> reduced;
-    if (reduce_to_8bit){
-        // little-endian 16-bit samples: keep the high byte
-        reduced.resize(size / 2);
-        for (size_t i = 0; i < reduced.size(); i++) reduced[i] = data[2 * i + 1];
-        data = reduced.data();
-        size = reduced.size();
+    GstBuffer *buf;
+    if (format->reduce_to_8bit){
+        /* little-endian 16-bit samples: keep the high byte */
+        auto *reduced = new std::vector<uint8_t>(msg->data.size() / 2);
+        for (size_t i = 0; i < reduced->size(); i++) (*reduced)[i] = msg->data[2 * i + 1];
+        buf = wrap_buffer(reduced->data(), reduced->size(), reduced);
+    } else {
+        /* no copy: the buffer keeps the message alive until the pipeline is done with it */
+        buf = wrap_buffer(msg->data.data(), msg->data.size(), new sensor_msgs::msg::Image::SharedPtr(msg));
     }
-
-    for (GstAppSrc *appsrc : appsrc_list){
-        gst_app_src_set_caps(appsrc, caps);
-        GstBuffer *buf = gst_buffer_new_allocate(nullptr, size, nullptr);
-        gst_buffer_fill(buf, 0, data, size);
-        GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
-        gst_app_src_push_buffer(appsrc, buf);
-    }
-    gst_caps_unref(caps);
+    push_frame(buf, caps_for(format->gst, msg->width, msg->height));
 }
 
 void Image2rtsp::compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg){
     std::lock_guard<std::mutex> lock(appsrc_mutex);
     if (appsrc_list.empty()) return;
 
-    cv::Mat img = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_UNCHANGED);
-    if (img.empty()) {
+    auto *img = new cv::Mat(cv::imdecode(cv::Mat(msg->data), cv::IMREAD_UNCHANGED));
+    if (img->empty()){
         RCLCPP_ERROR(this->get_logger(), "Failed to decompress image");
+        delete img;
         return;
     }
 
     // cv::imdecode returns OpenCV channel order: BGR / BGRA / GRAY
-    std::string gst_format;
-    switch (img.type()) {
+    const char *gst_format;
+    switch (img->type()){
         case CV_8UC3: gst_format = "BGR"; break;
         case CV_8UC4: gst_format = "BGRA"; break;
         case CV_8UC1: gst_format = "GRAY8"; break;
         default:
-            RCLCPP_ERROR(this->get_logger(), "Unsupported decoded image type (depth %d, %d channels) for format '%s'", img.depth(), img.channels(), msg->format.c_str());
+            RCLCPP_ERROR(this->get_logger(), "Unsupported decoded image type (depth %d, %d channels) for format '%s'", img->depth(), img->channels(), msg->format.c_str());
+            delete img;
             return;
     }
+    if (!img->isContinuous()) *img = img->clone();
 
-    GstCaps *caps = gst_caps_new_simple("video/x-raw",
-                                        "format", G_TYPE_STRING, gst_format.c_str(),
-                                        "width", G_TYPE_INT, img.cols,
-                                        "height", G_TYPE_INT, img.rows,
-                                        "framerate", GST_TYPE_FRACTION, framerate, 1,
-                                        nullptr);
-
-    for (GstAppSrc *appsrc : appsrc_list){
-        gst_app_src_set_caps(appsrc, caps);
-        GstBuffer *buf = gst_buffer_new_allocate(nullptr, img.total() * img.elemSize(), nullptr);
-        gst_buffer_fill(buf, 0, img.data, img.total() * img.elemSize());
-        GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
-        gst_app_src_push_buffer(appsrc, buf);
-    }
-    gst_caps_unref(caps);
+    /* the buffer keeps the decoded image alive until the pipeline is done with it */
+    GstBuffer *buf = wrap_buffer(img->data, img->total() * img->elemSize(), img);
+    push_frame(buf, caps_for(gst_format, img->cols, img->rows));
 }

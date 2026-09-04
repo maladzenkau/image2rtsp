@@ -12,6 +12,12 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
 
+// GStreamer video/x-raw format for a ROS image encoding
+struct ImageFormat {
+    const char *gst;
+    bool reduce_to_8bit;   // 16-bit packed RGB/BGR: GStreamer has no such format, keep the high byte of each sample
+};
+
 class Image2rtsp : public rclcpp::Node{
 public:
     Image2rtsp();
@@ -39,6 +45,12 @@ private:
     std::vector<GstAppSrc*> appsrc_list;
     std::mutex appsrc_mutex;
 
+    // Caps of the last pushed frame, rebuilt only when format or size change
+    GstCaps *caps = nullptr;
+    std::string caps_format;
+    int caps_width = 0;
+    int caps_height = 0;
+
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
     rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr subscription_compressed_;
 
@@ -46,7 +58,9 @@ private:
     GstRTSPServer *rtsp_server_create(const std::string &port, bool local_only);
     void rtsp_server_add_url(const char *url, const char *sPipeline);
     unsigned int extract_framerate(const std::string &pipeline, unsigned int default_framerate);
-    GstCaps *gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg, bool &reduce_to_8bit);
+    const ImageFormat *format_from_encoding(const sensor_msgs::msg::Image &msg);
+    GstCaps *caps_for(const char *gst_format, int width, int height);
+    void push_frame(GstBuffer *buf, GstCaps *frame_caps);
     void topic_callback(const sensor_msgs::msg::Image::SharedPtr msg);
     void compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg);
 
