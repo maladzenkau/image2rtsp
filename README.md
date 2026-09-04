@@ -10,7 +10,6 @@ Supported and tested `sensor_msgs::msg::CompressedImage` formats: "**rgb8; jpeg 
 
 The development is being carried out on Ubuntu 22.04 with ROS2 Humble. Tested with Intel RealSense d435i.
 
-You are reading now the README for a **default** ROS2 package. If you want to use this package written as a ROS2 component, checkout `ros2_component` branch. 
 ## Dependencies
 - ROS2 Humble
 
