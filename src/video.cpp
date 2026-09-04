@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 #include "../include/image2rtsp.hpp"
-#include "../include/image_encodings.h"
+#include <sensor_msgs/image_encodings.hpp>
 
 using namespace std;
 
@@ -141,20 +141,30 @@ static void media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpointer
     }
 }
 
-GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg){
-    // http://gstreamer.freedesktop.org/data/doc/gstreamer/head/pwg/html/section-types-definitions.html
-    static const std::map<std::string, std::string> known_formats = {
-        {sensor_msgs::image_encodings::RGB8, "RGB"},
-        {sensor_msgs::image_encodings::RGB16, "RGB16"},
-        {sensor_msgs::image_encodings::RGBA8, "RGBA"},
-        {sensor_msgs::image_encodings::RGBA16, "RGBA16"},
-        {sensor_msgs::image_encodings::BGR8, "BGR"},
-        {sensor_msgs::image_encodings::BGR16, "BGR16"},
-        {sensor_msgs::image_encodings::BGRA8, "BGRA"},
-        {sensor_msgs::image_encodings::BGRA16, "BGRA16"},
-        {sensor_msgs::image_encodings::MONO8, "GRAY8"},
-        {sensor_msgs::image_encodings::MONO16, "GRAY16_LE"},
-        {sensor_msgs::image_encodings::YUV422, "YUY2"},
+GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg, bool &reduce_to_8bit){
+    // ROS encoding -> GStreamer video/x-raw format (https://gstreamer.freedesktop.org/documentation/video/video-format.html).
+    // GStreamer has no 48-bit packed RGB, so rgb16/bgr16 are reduced to 8 bit by keeping the high byte of each sample.
+    struct Format { const char *gst; bool reduce_to_8bit; };
+    namespace enc = sensor_msgs::image_encodings;
+    static const std::map<std::string, Format> known_formats = {
+        {enc::RGB8,        {"RGB",       false}},
+        {enc::BGR8,        {"BGR",       false}},
+        {enc::RGBA8,       {"RGBA",      false}},
+        {enc::BGRA8,       {"BGRA",      false}},
+        {enc::MONO8,       {"GRAY8",     false}},
+        {enc::MONO16,      {"GRAY16_LE", false}},
+        {enc::RGB16,       {"RGB",       true}},
+        {enc::BGR16,       {"BGR",       true}},
+        {enc::RGBA16,      {"RGBA64_LE", false}},
+        {enc::BGRA16,      {"BGRA64_LE", false}},
+        {enc::TYPE_8UC1,   {"GRAY8",     false}},
+        {enc::TYPE_8UC3,   {"BGR",       false}},   // OpenCV channel order
+        {enc::TYPE_8UC4,   {"BGRA",      false}},
+        {enc::TYPE_16UC1,  {"GRAY16_LE", false}},
+        {enc::YUV422,      {"UYVY",      false}},
+        {enc::YUV422_YUY2, {"YUY2",      false}},
+        {enc::NV21,        {"NV21",      false}},
+        {enc::NV24,        {"NV24",      false}},
     };
 
     if (msg->is_bigendian){
@@ -168,8 +178,9 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
         return nullptr;
     }
 
+    reduce_to_8bit = format->second.reduce_to_8bit;
     return gst_caps_new_simple("video/x-raw",
-                               "format", G_TYPE_STRING, format->second.c_str(),
+                               "format", G_TYPE_STRING, format->second.gst,
                                "width", G_TYPE_INT, msg->width,
                                "height", G_TYPE_INT, msg->height,
                                "framerate", GST_TYPE_FRACTION, framerate, 1,
@@ -197,13 +208,25 @@ void Image2rtsp::topic_callback(const sensor_msgs::msg::Image::SharedPtr msg){
     if (appsrc_list.empty()) return;
 
     RCLCPP_DEBUG(this->get_logger(), "Received image %dx%d, encoding=%s", msg->width, msg->height, msg->encoding.c_str());
-    GstCaps *caps = gst_caps_new_from_image(msg);
+    bool reduce_to_8bit = false;
+    GstCaps *caps = gst_caps_new_from_image(msg, reduce_to_8bit);
     if (!caps) return;
+
+    const uint8_t *data = msg->data.data();
+    size_t size = msg->data.size();
+    std::vector<uint8_t> reduced;
+    if (reduce_to_8bit){
+        // little-endian 16-bit samples: keep the high byte
+        reduced.resize(size / 2);
+        for (size_t i = 0; i < reduced.size(); i++) reduced[i] = data[2 * i + 1];
+        data = reduced.data();
+        size = reduced.size();
+    }
 
     for (GstAppSrc *appsrc : appsrc_list){
         gst_app_src_set_caps(appsrc, caps);
-        GstBuffer *buf = gst_buffer_new_allocate(nullptr, msg->data.size(), nullptr);
-        gst_buffer_fill(buf, 0, msg->data.data(), msg->data.size());
+        GstBuffer *buf = gst_buffer_new_allocate(nullptr, size, nullptr);
+        gst_buffer_fill(buf, 0, data, size);
         GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_LIVE);
         gst_app_src_push_buffer(appsrc, buf);
     }

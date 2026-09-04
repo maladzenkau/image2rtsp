@@ -4,7 +4,7 @@ This project is a migration from ROS1 to ROS2. The original code was developed b
 ## image2rtsp
 This project enables the conversion of a selected ROS2 topic of type `sensor_msgs::msg::Image` or `sensor_msgs::msg::CompressedImage` into an `RTSP` stream, with an anticipated delay of approximately 0,3-0,4s. It also supports usb camera as a direct source. The generated stream can be utilized for various purposes such as remote control, object detection tasks, monitoring and more.
 
-Currently supported and tested `sensor_msgs::msg::Image` formats: "**rgb8**", "**rgba8**", "**rgb16**", "**rgba16**", "**bgr8**", "**bgra8**", "**bgr16**", "**bgra16**", "**mono8**", "**mono16**", "**yuv422_yuy2**". 
+Currently supported and tested `sensor_msgs::msg::Image` formats: "**rgb8**", "**rgba8**", "**rgb16**", "**rgba16**", "**bgr8**", "**bgra8**", "**bgr16**", "**bgra16**", "**mono8**", "**mono16**", "**8UC1**", "**8UC3**", "**8UC4**", "**16UC1**", "**yuv422**", "**yuv422_yuy2**", "**nv21**", "**nv24**". "8UC3"/"8UC4" are assumed to be in OpenCV's BGR order; "rgb16"/"bgr16" are reduced to 8 bit per channel before encoding. 
 
 Supported and tested `sensor_msgs::msg::CompressedImage` formats: "**rgb8; jpeg compressed bgr8**". Other formats may work as well with some color scheme deviations. Please open an issue in this case and attach your **ros2 bag**, so i can fix it. If you need some specific unsupported format, create an issue and i will try to add it as soon as possible, but normally it takes pretty long, so dont hesitate to create a PR.
 

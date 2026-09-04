@@ -40,7 +40,7 @@ private:
     void compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg);
     uint extract_framerate(const std::string& pipeline, uint default_framerate);
     GstRTSPServer *rtsp_server_create(const string &port, const bool local_only);
-    GstCaps *gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg);
+    GstCaps *gst_caps_new_from_image(const sensor_msgs::msg::Image::SharedPtr &msg, bool &reduce_to_8bit);
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
     rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr subscription_compressed_;
 };
