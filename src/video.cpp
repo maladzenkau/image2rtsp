@@ -2,49 +2,58 @@
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/image_encodings.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <algorithm>
+#include <map>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "image2rtsp.hpp"
-#include <sensor_msgs/image_encodings.hpp>
-
-using namespace std;
-
-static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
-static gboolean session_cleanup(gpointer user_data);
-
-static void *mainloop(void *){
-    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
-    g_main_loop_run(loop);
-    g_main_loop_unref(loop);
-    return NULL;
-}
 
 void Image2rtsp::video_mainloop_start(){
-    pthread_t tloop;
-    gst_init(NULL, NULL);
-    pthread_create(&tloop, NULL, &mainloop, NULL);
+    main_loop = g_main_loop_new(NULL, FALSE);
+    main_loop_thread = std::thread([this]{ g_main_loop_run(main_loop); });
 }
 
-GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, const bool local_only){
-    GstRTSPServer *server;
-
-    /* create a server instance */
-    server = gst_rtsp_server_new();
-    // char *port = (char *) port;
-    g_object_set(server, "service", port.c_str(), NULL);
-    /* attach the server to the default maincontext */
-    if (local_only){
-    g_object_set(server, "address", "127.0.0.1", NULL);
+Image2rtsp::~Image2rtsp(){
+    /* close every client connection, stop the GStreamer main loop and release the server */
+    GList *clients = gst_rtsp_server_client_filter(rtsp_server,
+        [](GstRTSPServer *, GstRTSPClient *, gpointer){ return GST_RTSP_FILTER_REMOVE; }, nullptr);
+    g_list_free_full(clients, g_object_unref);
+    if (main_loop){
+        g_main_loop_quit(main_loop);
+        main_loop_thread.join();
     }
-    if (gst_rtsp_server_attach(server, NULL) == 0){
+    if (cleanup_source_id) g_source_remove(cleanup_source_id);
+    if (server_source_id) g_source_remove(server_source_id);
+    g_object_unref(rtsp_server);
+    if (main_loop) g_main_loop_unref(main_loop);
+
+    /* media that never got to emit "unprepared" still holds appsrc references in the list */
+    std::lock_guard<std::mutex> lock(appsrc_mutex);
+    for (GstAppSrc *appsrc : appsrc_list) gst_object_unref(appsrc);
+    appsrc_list.clear();
+}
+
+GstRTSPServer *Image2rtsp::rtsp_server_create(const std::string &port, bool local_only){
+    GstRTSPServer *server = gst_rtsp_server_new();
+    g_object_set(server, "service", port.c_str(), NULL);
+    if (local_only){
+        g_object_set(server, "address", "127.0.0.1", NULL);
+    }
+    /* attach the server to the default main context, which the main loop thread will run */
+    server_source_id = gst_rtsp_server_attach(server, NULL);
+    if (server_source_id == 0){
         gchar *address = gst_rtsp_server_get_address(server);
         std::string msg = "Could not bind the RTSP server to " + std::string(address) + ":" + port + " (is the port already in use?)";
         g_free(address);
         g_object_unref(server);
         throw std::runtime_error(msg);
     }
-    /* add a timeout for the session cleanup */
-    g_timeout_add_seconds(2, session_cleanup, this);
+    /* periodically remove expired sessions */
+    cleanup_source_id = g_timeout_add_seconds(2, session_cleanup, this);
     return server;
 }
 
@@ -66,7 +75,7 @@ void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline){
     /* notify when our media is ready, This is called whenever someone asks for
      * the media and a new pipeline is created */
     // Pass `this` as user_data so media_configure can register the media's appsrc on the node
-    g_signal_connect(factory, "media-configure", (GCallback)media_configure, this);
+    g_signal_connect(factory, "media-configure", G_CALLBACK(media_configure), this);
 
     gst_rtsp_media_factory_set_shared(factory, TRUE);
 
@@ -82,7 +91,7 @@ struct MediaCleanupData {
     GstAppSrc *appsrc;
 };
 
-static void media_unprepared(GstRTSPMedia *, gpointer user_data){
+void Image2rtsp::media_unprepared(GstRTSPMedia *, gpointer user_data){
     MediaCleanupData *data = static_cast<MediaCleanupData*>(user_data);
     {
         std::lock_guard<std::mutex> lock(data->node->appsrc_mutex);
@@ -93,7 +102,7 @@ static void media_unprepared(GstRTSPMedia *, gpointer user_data){
     delete data;
 }
 
-static void media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpointer user_data){
+void Image2rtsp::media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpointer user_data){
     Image2rtsp *node = static_cast<Image2rtsp*>(user_data);
     GstElement *pipeline = gst_rtsp_media_get_element(media);
     GstElement *imagesrc = gst_bin_get_by_name(GST_BIN(pipeline), "imagesrc");
@@ -187,7 +196,7 @@ GstCaps *Image2rtsp::gst_caps_new_from_image(const sensor_msgs::msg::Image::Shar
                                nullptr);
 }
 
-static gboolean session_cleanup(gpointer user_data){
+gboolean Image2rtsp::session_cleanup(gpointer user_data){
     Image2rtsp *node = static_cast<Image2rtsp*>(user_data);
     GstRTSPServer *server = node->rtsp_server;
     GstRTSPSessionPool *pool;
