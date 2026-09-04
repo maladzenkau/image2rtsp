@@ -10,6 +10,13 @@ Supported and tested `sensor_msgs::msg::CompressedImage` formats: "**rgb8; jpeg 
 
 The development is being carried out on Ubuntu 22.04 with ROS2 Humble. Tested with Intel RealSense d435i.
 
+> **Note:** the `ros2_component` branch has been removed. It contained an
+> experimental variant of this package written as a composable ROS2 component.
+> It had fallen far behind `master` (missing compressed image support and the
+> GStreamer pipeline refactor), and composition brought little practical benefit
+> here: receiving and deserializing images accounts for only a few percent of
+> this node's CPU usage, while H.264 encoding dominates the rest.
+
 ## Dependencies
 - ROS2 Humble
 
