@@ -5,7 +5,7 @@ type: software
 authors:
   - family-names: Maladzenkau
     given-names: Dzmitry
-version: "1.0"
+version: "1.0.0"
 date-released: 2023-11-27
 license: BSD-3-Clause
 repository-code: https://github.com/maladzenkau/image2rtsp

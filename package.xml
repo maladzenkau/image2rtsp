@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>image2rtsp</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>Streams a ROS 2 image topic or a V4L2 camera as an RTSP H.264 stream</description>
   <maintainer email="dmalad@rptu.de">Dzmitry Maladzenkau</maintainer>
   <license>BSD-3-Clause</license>
