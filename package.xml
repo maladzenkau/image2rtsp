@@ -3,23 +3,35 @@
 <package format="3">
   <name>image2rtsp</name>
   <version>0.0.0</version>
-  <description>topic to RTSP stream package</description>
-  <maintainer email="dmalad@rptu.de">dmitry</maintainer>
-  <license>BSD</license>
+  <description>Streams a ROS 2 image topic or a V4L2 camera as an RTSP H.264 stream</description>
+  <maintainer email="dmalad@rptu.de">Dzmitry Maladzenkau</maintainer>
+  <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
-  <depend>python3-opencv</depend>
+  <depend>libopencv-dev</depend>
 
-  <build_depend>gstreamer1.0-plugins-base</build_depend>
-  <build_depend>gstreamer1.0-plugins-good</build_depend>
-  <build_depend>gstreamer1.0-plugins-bad</build_depend>
-  <build_depend>gstreamer1.0-plugins-ugly</build_depend>
-  <build_depend>libgstrtspserver-1.0-dev</build_depend>
+  <!-- GStreamer core, app and rtsp-server libraries (headers for the build, .so at runtime) -->
+  <depend>libgstreamer1.0-dev</depend>
+  <depend>libgstreamer-plugins-base1.0-dev</depend>
+  <depend>libgstrtspserver-1.0-dev</depend>
 
+  <!-- Elements used by the default pipelines (videoconvert, videoscale, x264enc, rtph264pay, v4l2src) -->
+  <exec_depend>gstreamer1.0-plugins-base</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-good</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-bad</exec_depend>
+  <exec_depend>gstreamer1.0-plugins-ugly</exec_depend>
+
+  <!-- Launch files -->
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <!-- scripts/rtsp.py viewer -->
+  <exec_depend>python3-opencv</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
