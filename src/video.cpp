@@ -220,13 +220,14 @@ void Image2rtsp::compressed_topic_callback(const sensor_msgs::msg::CompressedIma
         return;
     }
 
+    // cv::imdecode returns OpenCV channel order: BGR / BGRA / GRAY
     std::string gst_format;
     switch (img.type()) {
         case CV_8UC3: gst_format = "BGR"; break;
-        case CV_8UC4: gst_format = "RGBA"; break;
+        case CV_8UC4: gst_format = "BGRA"; break;
         case CV_8UC1: gst_format = "GRAY8"; break;
         default:
-            RCLCPP_ERROR(this->get_logger(), "Unsupported image type");
+            RCLCPP_ERROR(this->get_logger(), "Unsupported decoded image type (depth %d, %d channels) for format '%s'", img.depth(), img.channels(), msg->format.c_str());
             return;
     }
 
