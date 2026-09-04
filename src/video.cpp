@@ -113,9 +113,14 @@ void Image2rtsp::media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpo
 
         gst_util_set_object_arg(G_OBJECT(appsrc), "format", "time");
         gst_app_src_set_stream_type(appsrc, GST_APP_STREAM_TYPE_STREAM);
-        gst_app_src_set_max_buffers(appsrc, 0);
+        /* Queue at most two frames. If the encoder cannot keep up with the topic, drop the
+         * oldest frame instead of growing the queue, and the latency, without bound. */
+        gst_app_src_set_max_buffers(appsrc, 2);
         gst_app_src_set_max_bytes(appsrc, 0);
         gst_app_src_set_max_time(appsrc, 0);
+#if GST_CHECK_VERSION(1, 20, 0)
+        gst_app_src_set_leaky_type(appsrc, GST_APP_LEAKY_TYPE_DOWNSTREAM);
+#endif
 
         {
             std::lock_guard<std::mutex> lock(node->appsrc_mutex);
