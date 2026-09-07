@@ -70,6 +70,9 @@ sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1
                           rtph264pay name=pay0 pt=96 )
 
       # Notice: Here the framerate might be set to the camera framerate, otherwise "503 Service Unavailable" error will appear.
+      # With camera: True the device is checked once at startup. If it is missing or already in use by another
+      # process, the node reports the reason and exits instead of starting a server that can only answer 503.
+      # A pipeline that fails later, for example because of the framerate above, is reported on the ROS log.
 
       # RTSP setup
       mountpoint:       "/back"

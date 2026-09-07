@@ -5,6 +5,7 @@
 #include <sensor_msgs/image_encodings.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <algorithm>
+#include <atomic>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -88,18 +89,38 @@ void Image2rtsp::rtsp_server_add_url(const char *url, const char *sPipeline){
 }
 
 struct MediaCleanupData {
-    Image2rtsp *node;
-    GstAppSrc *appsrc;
+    Image2rtsp *node = nullptr;
+    GstAppSrc *appsrc = nullptr;          // null for a camera pipeline, which has no appsrc
+    std::atomic<bool> prepared{false};    // set from the media's "prepared" signal
 };
+
+/* The media reached PLAYING, so its teardown later on is not a startup failure. */
+void Image2rtsp::media_prepared(GstRTSPMedia *, gpointer user_data){
+    static_cast<MediaCleanupData*>(user_data)->prepared = true;
+}
 
 void Image2rtsp::media_unprepared(GstRTSPMedia *, gpointer user_data){
     MediaCleanupData *data = static_cast<MediaCleanupData*>(user_data);
-    {
-        std::lock_guard<std::mutex> lock(data->node->appsrc_mutex);
-        auto &list = data->node->appsrc_list;
-        list.erase(std::remove(list.begin(), list.end(), data->appsrc), list.end());
+
+    /* A media torn down without ever being prepared never served a frame, and the client
+     * saw only a 503. Report that, because GStreamer keeps the reason to its own debug log.
+     * Do not call gst_rtsp_media_get_status() here: it blocks while the media is still
+     * preparing, which deadlocks preparation and makes every client fail. */
+    if (!data->prepared){
+        RCLCPP_ERROR(data->node->get_logger(),
+                     "RTSP media failed to start, the client was refused with 503. "
+                     "Check the source: camera busy or disconnected, or a framerate the "
+                     "source cannot deliver. Run with GST_DEBUG=2 for the GStreamer detail");
     }
-    gst_object_unref(data->appsrc);
+
+    if (data->appsrc){
+        {
+            std::lock_guard<std::mutex> lock(data->node->appsrc_mutex);
+            auto &list = data->node->appsrc_list;
+            list.erase(std::remove(list.begin(), list.end(), data->appsrc), list.end());
+        }
+        gst_object_unref(data->appsrc);
+    }
     delete data;
 }
 
@@ -108,6 +129,12 @@ void Image2rtsp::media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpo
     GstElement *pipeline = gst_rtsp_media_get_element(media);
     GstElement *imagesrc = gst_bin_get_by_name(GST_BIN(pipeline), "imagesrc");
     gst_object_unref(pipeline);
+
+    /* Every media reports failure through "unprepared", appsrc and camera alike. */
+    auto *cleanup = new MediaCleanupData();
+    cleanup->node = node;
+    g_signal_connect(media, "prepared", G_CALLBACK(media_prepared), cleanup);
+    g_signal_connect(media, "unprepared", G_CALLBACK(media_unprepared), cleanup);
 
     if (imagesrc){
         GstAppSrc *appsrc = GST_APP_SRC(imagesrc);
@@ -128,8 +155,7 @@ void Image2rtsp::media_configure(GstRTSPMediaFactory *, GstRTSPMedia *media, gpo
             node->appsrc_list.push_back(appsrc);
         }
 
-        auto *cleanup = new MediaCleanupData{node, appsrc};
-        g_signal_connect(media, "unprepared", G_CALLBACK(media_unprepared), cleanup);
+        cleanup->appsrc = appsrc;
     }
 }
 
