@@ -4,6 +4,8 @@
 #include <gst/rtsp-server/rtsp-server.h>
 #include <gst/app/gstappsrc.h>
 #include "image2rtsp.hpp"
+#include <stdexcept>
+#include <string>
 #ifdef __GLIBC__
 #include <malloc.h>
 #endif
@@ -59,13 +61,25 @@ Image2rtsp::Image2rtsp() : Node("image2rtsp"){
             RCLCPP_INFO(this->get_logger(), "Subscribing to sensor_msgs::msg::CompressedImage");
         }
     }
-    else {
-        RCLCPP_INFO(this->get_logger(), "Trying to access camera device");
-    }
 
     // Set up the RTSP server. The GStreamer main loop thread is started last, so a
     // failure here (e.g. the port is in use) can still be reported by throwing.
     gst_init(NULL, NULL);
+
+    // With a camera source nothing touches the device until the first client sends
+    // DESCRIBE, so a busy or missing device used to surface only as a 503 on the
+    // client with no trace in the ROS log. Check it up front and refuse to start.
+    if (camera){
+        std::string device = extract_device(camera_pipeline);
+        if (device.empty()){
+            RCLCPP_WARN(this->get_logger(), "camera is true but camera_pipeline has no 'device=': skipping the device check");
+        } else {
+            RCLCPP_INFO(this->get_logger(), "Checking camera device %s", device.c_str());
+            probe_camera_device(device);
+            RCLCPP_INFO(this->get_logger(), "Camera device %s is available", device.c_str());
+        }
+    }
+
     rtsp_server = rtsp_server_create(port, local_only);
 
     pipeline = camera ? camera_pipeline : default_pipeline;
@@ -116,6 +130,63 @@ unsigned int Image2rtsp::extract_framerate(const std::string& pipeline, unsigned
         RCLCPP_WARN(this->get_logger(), "Failed to parse framerate '%s', using default: %u", framerate_str.c_str(), default_framerate);
         return default_framerate;
     }
+}
+
+/* Pull the "device=..." value out of a gst-launch pipeline description. */
+std::string Image2rtsp::extract_device(const std::string &pipeline){
+    const std::string key = "device=";
+    size_t pos = pipeline.find(key);
+    if (pos == std::string::npos) return "";
+    pos += key.length();
+    size_t end = pipeline.find_first_of(" \t\r\n!", pos);
+    if (end == std::string::npos) end = pipeline.length();
+    std::string device = pipeline.substr(pos, end - pos);
+    /* tolerate device="/dev/video0" */
+    if (device.size() >= 2 && device.front() == '"' && device.back() == '"') device = device.substr(1, device.size() - 2);
+    return device;
+}
+
+/* Grab a single frame from the device so that an unusable camera (busy, missing, or
+ * without a usable format) stops the node instead of failing silently per client.
+ * Throws std::runtime_error, which main() turns into a FATAL log and exit code 1. */
+void Image2rtsp::probe_camera_device(const std::string &device){
+    std::string desc = "v4l2src device=" + device + " num-buffers=1 ! fakesink sync=false";
+    GError *parse_error = nullptr;
+    GstElement *probe = gst_parse_launch(desc.c_str(), &parse_error);
+    if (parse_error){
+        std::string msg = "Could not build the camera probe pipeline: " + std::string(parse_error->message);
+        g_error_free(parse_error);
+        if (probe) gst_object_unref(probe);
+        throw std::runtime_error(msg);
+    }
+
+    gst_element_set_state(probe, GST_STATE_PLAYING);
+    GstBus *bus = gst_element_get_bus(probe);
+    /* EOS: the frame arrived and the device works. ERROR: it does not. */
+    GstMessage *msg = gst_bus_timed_pop_filtered(bus, 5 * GST_SECOND,
+                                                 (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+    std::string failure;
+    bool timed_out = (msg == nullptr);
+    if (msg && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR){
+        GError *err = nullptr;
+        gchar *debug = nullptr;
+        gst_message_parse_error(msg, &err, &debug);
+        failure = "Camera device " + device + " is not usable: " + (err ? err->message : "unknown error");
+        if (debug) failure += std::string(" (") + debug + ")";
+        if (err) g_error_free(err);
+        g_free(debug);
+    }
+    if (msg) gst_message_unref(msg);
+    gst_element_set_state(probe, GST_STATE_NULL);
+    gst_object_unref(bus);
+    gst_object_unref(probe);
+
+    /* A timeout is ambiguous (a slow camera looks the same as a stuck one), so warn
+     * rather than refuse to start; a reported error is definitive and is fatal. */
+    if (timed_out){
+        RCLCPP_WARN(this->get_logger(), "No frame from %s within 5 s; starting anyway, the stream may not work", device.c_str());
+    }
+    if (!failure.empty()) throw std::runtime_error(failure);
 }
 
 int main(int argc, char *argv[]){

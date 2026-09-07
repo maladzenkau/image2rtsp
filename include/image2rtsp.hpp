@@ -58,14 +58,17 @@ private:
     GstRTSPServer *rtsp_server_create(const std::string &port, bool local_only);
     void rtsp_server_add_url(const char *url, const char *sPipeline);
     unsigned int extract_framerate(const std::string &pipeline, unsigned int default_framerate);
+    std::string extract_device(const std::string &pipeline);
+    void probe_camera_device(const std::string &device);
     const ImageFormat *format_from_encoding(const sensor_msgs::msg::Image &msg);
     GstCaps *caps_for(const char *gst_format, int width, int height);
     void push_frame(GstBuffer *buf, GstCaps *frame_caps);
     void topic_callback(const sensor_msgs::msg::Image::SharedPtr msg);
     void compressed_topic_callback(const sensor_msgs::msg::CompressedImage::SharedPtr msg);
 
-    // GStreamer callbacks; user_data is the Image2rtsp instance (or a MediaCleanupData for media_unprepared)
+    // GStreamer callbacks; user_data is the Image2rtsp instance (or a MediaCleanupData for media_prepared/media_unprepared)
     static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
+    static void media_prepared(GstRTSPMedia *media, gpointer user_data);
     static void media_unprepared(GstRTSPMedia *media, gpointer user_data);
     static gboolean session_cleanup(gpointer user_data);
 };
